@@ -5,7 +5,7 @@ from supabase import create_client
 # === ВСТАВЬТЕ СВОИ КЛЮЧИ ===
 TELEGRAM_TOKEN = "8741999320:AAGyL0vlMEqzIDRWPsrQPaVuHiFE8BFKrzs"
 DEEPSEEK_KEY = "sk-93c34f8f51f74cbfbedc719fa5842b27"
-SUPABASE_URL = "https://zebfxxnibqzcocpqflkr.supabese.co"
+SUPABASE_URL = "https://zebfxxnibqzcocpqflkr.supabase.co"
 SUPABASE_KEY = "sb_publishable_6k12yyZy4YSvjY1gcoUPEQ_40aZak2d"
 # ===========================
 
