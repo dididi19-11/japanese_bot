@@ -20,12 +20,22 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ========== ЗАГРУЗКА ПРОМТА ИЗ SUPABASE ==========
 def load_prompt_template():
     try:
-        result = supabase.table('prompt_templates').select('template').eq('id', 'master_prompt').eq('is_active', True).execute()
-        if result.data:
-            return result.data[0]['template']
+        response = supabase.table('prompt_templates').select('template').eq('id', 'master_prompt').eq('is_active', True).execute()
+        if hasattr(response, 'data'):
+            data = response.data
+        elif isinstance(response, dict) and 'data' in response:
+            data = response['data']
+        else:
+            data = response
+        
+        if data and len(data) > 0:
+            return data[0]['template']
+        else:
+            print("⚠️ Промт в БД не найден, использую живую заглушку")
+            return "Ты — Рёта, 15 лет, школьник. Ты дерзкий, энергичный, говоришь на молодёжном сленге. Ты учишь японскому языку через живые истории, мемы, приколы. Твои ответы могут быть короткими или длинными — зависит от ситуации. Главное, чтобы было живо и интересно. Не будь сухим учителем."
     except Exception as e:
         print(f"⚠️ Ошибка загрузки промта из БД: {e}")
-    return "Ты — учитель японского. Отвечай кратко."
+        return "Ты — Рёта. Ты учишь японскому языку. Отвечай живо, с юмором, используй молодёжный сленг. Длина ответа зависит от ситуации — где надо коротко, где надо развернуто."
 
 MASTER_PROMPT = load_prompt_template()
 print("✅ Промт загружен из Supabase")
