@@ -95,7 +95,8 @@ def extract_personal_info(user_id, recent_messages):
 
 # ========== ОСНОВНОЙ ОБРАБОТЧИК ==========
 @bot.message_handler(func=lambda m: True)
-def handle_message(message):print(f"Получено: {message.text}")
+def handle_message(message):
+    print(f"Получено: {message.text}")
     user_id = str(message.from_user.id)
     username = message.from_user.username
     profile = get_or_create_user(user_id, username)
@@ -103,7 +104,7 @@ def handle_message(message):print(f"Получено: {message.text}")
     # --- ИСТОРИЯ ДИАЛОГА ---
     history_text = ""
     if 'message_history' in profile and profile['message_history']:
-        last_messages = profile['message_history'][-16:]  # последние 8 пар
+        last_messages = profile['message_history'][-16:]
         history_text = "История диалога (последние сообщения):\n" + "\n".join(last_messages) + "\n\n"
 
     # --- ЛИЧНАЯ ИНФОРМАЦИЯ ---
@@ -111,7 +112,7 @@ def handle_message(message):print(f"Получено: {message.text}")
     personal_text = ""
     if personal_info:
         personal_text = f"""
-Личная информация об ученике, которую он рассказал:
+Личная информация об ученике:
 - Нравится: {personal_info.get('likes', [])}
 - Не нравится: {personal_info.get('dislikes', [])}
 - Где был: {personal_info.get('visited', [])}
@@ -128,11 +129,8 @@ def handle_message(message):print(f"Получено: {message.text}")
 
 Текущие данные ученика:
 - Уровень: {profile.get('level', 'не указан')}
-- Текущий урок: {profile['current_lesson']}
 - Выученные иероглифы: {', '.join(profile['learned_kanji']) if profile['learned_kanji'] else 'пока нет'}
-- Следующий иероглиф: {profile.get('next_kanji', 'ещё не выбран')}
 - Уровень отношений: {profile.get('relationship_level', 'не выбран')}/10
-- Знакомство завершено: {profile.get('onboarding_completed', False)}
 
 Сообщение ученика: {message.text}
 
@@ -150,55 +148,37 @@ def handle_message(message):print(f"Получено: {message.text}")
         answer = f"⚠️ Ошибка DeepSeek: {e}"
         print(answer)
 
-    # === АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ ПРОФИЛЯ ПО МАРКЕРАМ ===
-    # Уровень ученика (N5, N4, с нуля и т.д.)
+    # --- ОБРАБОТКА МАРКЕРОВ ---
     if '[LEVEL=' in answer:
         match = re.search(r'\[LEVEL=([^\]\s]+)\]', answer)
         if match:
-            new_level = match.group(1).upper()
-            if new_level in ['N5', 'N4', 'N3', 'N2', 'N1', 'С НУЛЯ']:
-                update_user(user_id, {'level': new_level})
-                print(f"📚 Уровень обновлён: {new_level}")
+            update_user(user_id, {'level': match.group(1)})
             answer = re.sub(r'\[LEVEL=[^\]]+\]', '', answer)
 
-    # Уровень отношений
     if '[RELATIONSHIP=' in answer:
         match = re.search(r'\[RELATIONSHIP=(\d+)\]', answer)
         if match:
-            new_rel = int(match.group(1))
-            if 1 <= new_rel <= 10:
-                update_user(user_id, {'relationship_level': new_rel})
-                print(f"❤️ Уровень отношений обновлён: {new_rel}")
+            update_user(user_id, {'relationship_level': int(match.group(1))})
             answer = re.sub(r'\[RELATIONSHIP=\d+\]', '', answer)
 
-    # Выученные иероглифы
     if '[LEARNED_KANJI=' in answer:
         match = re.search(r'\[LEARNED_KANJI=([^\]]+)\]', answer)
         if match:
             new_kanji = [k.strip() for k in match.group(1).split(',')]
             current = profile.get('learned_kanji', [])
-            updated = list(set(current + new_kanji))
-            update_user(user_id, {'learned_kanji': updated})
-            print(f"📝 Добавлены иероглифы: {new_kanji}")
+            update_user(user_id, {'learned_kanji': list(set(current + new_kanji))})
             answer = re.sub(r'\[LEARNED_KANJI=[^\]]+\]', '', answer)
 
-    # Завершение знакомства
     if '[ONBOARDING_COMPLETED=true]' in answer:
         update_user(user_id, {'onboarding_completed': True})
-        print("✅ Онбординг завершён")
         answer = answer.replace('[ONBOARDING_COMPLETED=true]', '')
 
-    # Следующий иероглиф
     if '[NEXT_KANJI=' in answer:
         match = re.search(r'\[NEXT_KANJI=([^\]]+)\]', answer)
         if match:
-            next_kanji = match.group(1).strip()
-            if next_kanji:
-                update_user(user_id, {'next_kanji': next_kanji, 'current_lesson': profile.get('current_lesson', 0) + 1})
-                print(f"➡️ Следующий иероглиф: {next_kanji}")
+            update_user(user_id, {'next_kanji': match.group(1)})
             answer = re.sub(r'\[NEXT_KANJI=[^\]]+\]', '', answer)
 
-    # Очистка лишних пробелов после удаления маркеров
     answer = re.sub(r'\n\s*\n', '\n\n', answer).strip()
 
     # --- СОХРАНЕНИЕ ИСТОРИИ ---
@@ -212,8 +192,8 @@ def handle_message(message):print(f"Получено: {message.text}")
         'dialogue_count': profile.get('dialogue_count', 0) + 1
     })
 
-    # --- ФОНОВОЕ ИЗВЛЕЧЕНИЕ ФАКТОВ ---
-    last_messages_for_analysis = "\n".join(history[-6:])  # последние 3 пары
+    # --- ФОНОВЫЙ АНАЛИЗ ---
+    last_messages_for_analysis = "\n".join(history[-6:])
     threading.Thread(target=extract_personal_info, args=(user_id, last_messages_for_analysis)).start()
 
     # --- ОТПРАВКА ОТВЕТА ---
@@ -221,5 +201,5 @@ def handle_message(message):print(f"Получено: {message.text}")
 
 # ========== ЗАПУСК ==========
 if __name__ == "__main__":
-    print("✅ Бот запущен с автообновлением профиля!")
+    print("✅ Бот запущен!")
     bot.infinity_polling()
