@@ -96,7 +96,7 @@ def extract_personal_info(user_id, recent_messages):
 # ========== ОСНОВНОЙ ОБРАБОТЧИК ==========
 @bot.message_handler(func=lambda m: True)
 def handle_message(message):print(f"Получено: {message.text}")
-user_id = str(message.from_user.id)
+    user_id = str(message.from_user.id)
     username = message.from_user.username
     profile = get_or_create_user(user_id, username)
 
