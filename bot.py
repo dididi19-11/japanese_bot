@@ -7,10 +7,10 @@ import threading
 import re
 
 # ===== ВАШИ КЛЮЧИ (замените на реальные) =====
-TELEGRAM_TOKEN = "ВАШ_ТОКЕН_ТЕЛЕГРАМ"
-DEEPSEEK_KEY = "ВАШ_КЛЮЧ_DEEPSEEK"
-SUPABASE_URL = "ВАШ_URL_SUPABASE"
-SUPABASE_KEY = "ВАШ_КЛЮЧ_SUPABASE"
+TELEGRAM_TOKEN = "8741999320:AAGyL0vlMEqzIDRWPsrQPaVuHiFE8BFKrzs"
+DEEPSEEK_KEY = "sk-93c34f8f51f74cbfbedc719fa5842b27"
+SUPABASE_URL = "https://zebfxxnibqzcocpqflkr.supabase.co"
+SUPABASE_KEY = "sb_publishable_6k12yyZy4YSvjY1gcoUPEQ_40aZak2d"
 # ============================================
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
