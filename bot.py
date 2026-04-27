@@ -23,26 +23,32 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ========== ЗАГРУЗКА ПРОМТА ИЗ SUPABASE ==========
 def load_prompt_template():
     try:
-        response = supabase.table('prompt_templates').select('template').eq('id', 'master_prompt').eq('is_active', True).execute()
-        if response.data and len(response.data) > 0:
-            return response.data[0]['template']
+        # Прямой запрос без лишних проверок
+        result = supabase.table('prompt_templates').select('template').eq('id', 'master_prompt').eq('is_active', True).execute()
+        
+        # Печатаем в логи, что пришло (для отладки)
+        print(f"📦 Ответ от Supabase: {result}")
+        
+        if result.data and len(result.data) > 0:
+            template = result.data[0]['template']
+            print(f"✅ Промт загружен, длина: {len(template)} символов")
+            return template
         else:
-            print("⚠️ Запись не найдена")
+            print("⚠️ result.data пуст или нет данных")
             return None
     except Exception as e:
-        print(f"⚠️ Ошибка: {e}")
+        print(f"❌ Ошибка при запросе к Supabase: {e}")
         return None
 
+# Загружаем промт
 MASTER_PROMPT = load_prompt_template()
+
 if MASTER_PROMPT:
     print("✅ Промт загружен из Supabase")
-    print(f"Первые 100 символов: {MASTER_PROMPT[:100]}")
+    print(f"📝 Первые 100 символов: {MASTER_PROMPT[:100]}")
 else:
     print("❌ Промт не загружен, использую заглушку")
-    MASTER_PROMPT = "Ты — Рёта, 15 лет, школьник. Ты дерзкий, энергичный, говоришь на молодёжном сленге. Ты учишь японскому языку через живые истории, мемы, приколы. Отвечай естественно, не будь сухим учителем."
-
-MASTER_PROMPT = load_prompt_template()
-print("✅ Промт загружен из Supabase")
+    MASTER_PROMPT = "Ты — Рёта, 15 лет, школьник. Ты дерзкий, энергичный, говоришь на молодёжном сленге. Ты учишь японскому языку через живые истории, мемы, приколы. Не будь сухим учителем."
 
 # ========== РАБОТА С ПРОФИЛЕМ ==========
 def get_or_create_user(user_id, username):
