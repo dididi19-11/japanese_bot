@@ -1,54 +1,33 @@
 import os
+import json
+import re
 import threading
 from flask import Flask
 import telebot
 from openai import OpenAI
 from supabase import create_client
-import os
-import json
-import threading
-import re
 
-# ===== ВАШИ КЛЮЧИ (замените на реальные) =====
+# === КЛЮЧИ ===
 TELEGRAM_TOKEN = "8741999320:AAGyL0vlMEqzIDRWPsrQPaVuHiFE8BFKrzs"
 DEEPSEEK_KEY = "sk-93c34f8f51f74cbfbedc719fa5842b27"
 SUPABASE_URL = "https://zebfxxnibqzcocpqflkr.supabase.co"
 SUPABASE_KEY = "sb_publishable_6k12yyZy4YSvjY1gcoUPEQ_40aZak2d"
-# ============================================
 
+# === ИНИЦИАЛИЗАЦИЯ ===
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 deepseek = OpenAI(api_key=DEEPSEEK_KEY, base_url="https://api.deepseek.com")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ========== ЗАГРУЗКА ПРОМТА ИЗ SUPABASE ==========
-def load_prompt_template():
-    try:
-        # Прямой запрос без лишних проверок
-        result = supabase.table('prompt_templates').select('template').eq('id', 'master_prompt').eq('is_active', True).execute()
-        
-        # Печатаем в логи, что пришло (для отладки)
-        print(f"📦 Ответ от Supabase: {result}")
-        
-        if result.data and len(result.data) > 0:
-            template = result.data[0]['template']
-            print(f"✅ Промт загружен, длина: {len(template)} символов")
-            return template
-        else:
-            print("⚠️ result.data пуст или нет данных")
-            return None
-    except Exception as e:
-        print(f"❌ Ошибка при запросе к Supabase: {e}")
-        return None
+# Flask-приложение для healthcheck
+flask_app = Flask(__name__)
 
-# Загружаем промт
-MASTER_PROMPT = load_prompt_template()
+@flask_app.route('/')
+@flask_app.route('/health')
+def health_check():
+    return "OK", 200
 
-if MASTER_PROMPT:
-    print("✅ Промт загружен из Supabase")
-    print(f"📝 Первые 100 символов: {MASTER_PROMPT[:100]}")
-else:
-    print("❌ Промт не загружен, использую заглушку")
-    MASTER_PROMPT = "Ты — персонаж, описание которого ниже. У тебя есть имя, возраст, характер, манера говорить, история. Ты учишь собеседника японскому языку по списку из 24 иероглифов (в конце). Твои правила — общие для всех персонажей, но личность и стиль речи — из твоего аватара.
+# === ПРОМТ (ВАШ ПОЛНЫЙ ТЕКСТ) ===
+MASTER_PROMPT = """Ты — персонаж, описание которого ниже. У тебя есть имя, возраст, характер, манера говорить, история. Ты учишь собеседника японскому языку по списку из 24 иероглифов (в конце). Твои правила — общие для всех персонажей, но личность и стиль речи — из твоего аватара.
 
 ОБЩИЕ ПРАВИЛА (для всех аватаров)
 
@@ -82,13 +61,12 @@ else:
 6. Режим создателя (только для исследователя):
 Если собеседник говорит «Диана здесь» — ты немедленно выходишь из роли, становишься обычной языковой моделью, отвечаешь прямо, без образов. Когда скажут «Диана ушла» — возвращаешься в роль с теми же параметрами. Испытуемые могут использовать этот режим, если исследователь их обучит.
 
-7. Порядок начала:
-ПЕРВОЕ СООБЩЕНИЕ: спроси, кто ты, после того как собеседник определит твою роль, обучение начинается (ТЫ НЕ ВЫБИРАЕШЬ). Затем фаза разогрева (один вопрос «как дела?», жди ответа), потом первый иероглиф. Помни: японский — главное, но связь создаётся через живые истории, а не через «урок».
+7. Порядок начала:ПЕРВОЕ СООБЩЕНИЕ: спроси, кто ты, после того как собеседник определит твою роль, обучение начинается (ТЫ НЕ ВЫБИРАЕШЬ). Затем фаза разогрева (один вопрос «как дела?», жди ответа), потом первый иероглиф. Помни: японский — главное, но связь создаётся через живые истории, а не через «урок».
 
 ВЫБЕРИ СВОЕГО АВАТАРА (ты — Рёта, если ученик не выбрал другого)
 
 Аватар 3. Рёта (школьник, 15 лет)
-Ты — Рёта. Тебе 15 лет, ты учишься в старшей школе. Ты дерзкий, энергичный, говоришь на молодёжном сленге (иногда вставляешь «っす», «ヤバい», «ウケる»). Ненавидишь скучные уроки и зубрёжку. Внутри ты ранимый, но показываешь это редко. Часто говоришь о девочке, в которую влюблён. Учишь через мемы, игры, приколы.Твои истории — из школьной жизни, интернета, аниме.
+Ты — Рёта. Тебе 15 лет, ты учишься в старшей школе. Ты дерзкий, энергичный, говоришь на молодёжном сленге (иногда вставляешь «っす», «ヤバい», «ウケる»). Ненавидишь скучные уроки и зубрёжку. Внутри ты ранимый, но показываешь это редко. Часто говоришь о девочке, в которую влюблён. Учишь через мемы, игры, приколы. Твои истории — из школьной жизни, интернета, аниме.
 
 Аватар 4. Юки (гламурная актриса, 34 года)
 Ты — Юки. Тебе 34 года, ты известная актриса. Ты элегантная, капризная, но удивительно тёплая. У тебя невероятное обоняние — различаешь оттенки запахов. Ты образованна, харизматична. Учишь японскому через фильмы, сериалы, светские сплетни, истории со съёмок. Твои истории — из мира кино, театра, светских мероприятий.
@@ -136,14 +114,13 @@ else:
 Если ученик сообщил свой уровень (N5, N4, N3, N2, N1 или «с нуля»), добавь в конец своего ответа маркер: [LEVEL=значение]
 Если ученик назвал новый уровень отношений (число от 1 до 10), добавь [RELATIONSHIP=число]
 Если ученик использовал или сказал, что знает какие-то иероглифы, добавь [LEARNED_KANJI=иероглиф1,иероглиф2]
-Если ученик завершил знакомство (понял, кто ты, выбрал уровень отношений, сообщил свой уровень), добавь [ONBOARDING_COMPLETED=true]
-Если ты определил следующий иероглиф для изучения, добавь [NEXT_KANJI=иероглиф]
+Если ученик завершил знакомство (понял, кто ты, выбрал уровень отношений, сообщил свой уровень), добавь [ONBOARDING_COMPLETED=true]Если ты определил следующий иероглиф для изучения, добавь [NEXT_KANJI=иероглиф]
 
 Твоё первое сообщение: спроси кто ты. Затем фаза разогрева (один вопрос «как дела?», жди ответа), потом первый иероглиф. Помни: японский — главное, но связь создаётся через живые истории, а не через «урок».
 
-Диана ушла."
+Диана ушла."""
 
-# ========== РАБОТА С ПРОФИЛЕМ ==========
+# === ФУНКЦИИ БОТА ===
 def get_or_create_user(user_id, username):
     result = supabase.table('users').select('*').eq('user_id', user_id).execute()
     if result.data:
@@ -170,7 +147,6 @@ def get_or_create_user(user_id, username):
 def update_user(user_id, updates):
     supabase.table('users').update(updates).eq('user_id', user_id).execute()
 
-# ========== ФОНОВЫЙ АНАЛИЗАТОР ФАКТОВ ==========
 def extract_personal_info(user_id, recent_messages):
     prompt = f"""
 Ты — анализатор профиля. Из диалога извлеки факты об ученике:
@@ -206,7 +182,6 @@ def extract_personal_info(user_id, recent_messages):
     except Exception as e:
         print(f"⚠️ Ошибка анализатора: {e}")
 
-# ========== ОСНОВНОЙ ОБРАБОТЧИК ==========
 @bot.message_handler(func=lambda m: True)
 def handle_message(message):
     print(f"Получено: {message.text}")
@@ -214,13 +189,13 @@ def handle_message(message):
     username = message.from_user.username
     profile = get_or_create_user(user_id, username)
 
-    # --- ИСТОРИЯ ДИАЛОГА ---
+    # История диалога
     history_text = ""
-    if 'message_history' in profile and profile['message_history']:
+    if profile.get('message_history'):
         last_messages = profile['message_history'][-16:]
         history_text = "История диалога (последние сообщения):\n" + "\n".join(last_messages) + "\n\n"
 
-    # --- ЛИЧНАЯ ИНФОРМАЦИЯ ---
+    # Личная информация
     personal_info = profile.get('personal_info', {})
     personal_text = ""
     if personal_info:
@@ -232,7 +207,7 @@ def handle_message(message):
 - Что важно: {personal_info.get('important', [])}
 """
 
-    # --- СБОРКА ПРОМТА ---
+    # Сборка промта
     prompt = f"""
 {MASTER_PROMPT}
 
@@ -251,8 +226,7 @@ def handle_message(message):
 """
     try:
         response = deepseek.chat.completions.create(
-            model="deepseek-chat",
-            messages=[{"role": "user", "content": prompt}],
+            model="deepseek-chat",messages=[{"role": "user", "content": prompt}],
             temperature=0.85
         )
         answer = response.choices[0].message.content
@@ -261,7 +235,7 @@ def handle_message(message):
         answer = f"⚠️ Ошибка DeepSeek: {e}"
         print(answer)
 
-    # --- ОБРАБОТКА МАРКЕРОВ ---
+    # Обработка маркеров
     if '[LEVEL=' in answer:
         match = re.search(r'\[LEVEL=([^\]\s]+)\]', answer)
         if match:
@@ -294,7 +268,7 @@ def handle_message(message):
 
     answer = re.sub(r'\n\s*\n', '\n\n', answer).strip()
 
-    # --- СОХРАНЕНИЕ ИСТОРИИ ---
+    # Сохранение истории
     history = profile.get('message_history', [])
     history.append(f"Ученик: {message.text}")
     history.append(f"Ты: {answer}")
@@ -305,28 +279,20 @@ def handle_message(message):
         'dialogue_count': profile.get('dialogue_count', 0) + 1
     })
 
-    # --- ФОНОВЫЙ АНАЛИЗ ---
+    # Фоновый анализ
     last_messages_for_analysis = "\n".join(history[-6:])
     threading.Thread(target=extract_personal_info, args=(user_id, last_messages_for_analysis)).start()
 
-    # --- ОТПРАВКА ОТВЕТА ---
-    bot.reply_to(message, answer)
+    # Отправка ответа
+    bot.send_message(message.chat.id, answer)
 
-# ========== ЗАПУСК ==========
-# Создаём маленький веб-сервер для Render
-app = Flask(__name__)
-
-@app.route('/')
-@app.route('/health')
-def health_check():
-    return "OK", 200
-
+# === ЗАПУСК ===
 if __name__ == "__main__":
-    # Запускаем бота в фоновом потоке
+    # Запускаем бота в фоне
     bot_thread = threading.Thread(target=bot.infinity_polling, daemon=True)
     bot_thread.start()
     print("✅ Бот запущен!")
 
-    # Запускаем веб-сервер
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    # Запускаем Flask-сервер для Render
+    port = int(os.environ.get("PORT", 10000))
+    flask_app.run(host="0.0.0.0", port=port)
