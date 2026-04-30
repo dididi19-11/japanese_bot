@@ -88,7 +88,8 @@ MASTER_PROMPT = """Ты — персонаж, описание которого 
 === МАРКЕРЫ ДЛЯ ОБНОВЛЕНИЯ БАЗЫ ДАННЫХ ===
 Если ученик сообщил свой уровень (N5–N1 или «с нуля»), добавь [LEVEL=значение]
 Если ученик назвал новый уровень отношений (1–10), добавь [RELATIONSHIP=число]
-Если ученик использовал новый иероглиф, добавь [LEARNED_KANJI=иероглиф]Если ученик завершил знакомство, добавь [ONBOARDING_COMPLETED=true]
+Если ученик использовал новый иероглиф, добавь [LEARNED_KANJI=иероглиф]
+Если ученик завершил знакомство, добавь [ONBOARDING_COMPLETED=true]
 Если ты определил следующий иероглиф, добавь [NEXT_KANJI=иероглиф]
 Если ученик усвоил новую фразу, добавь [NEW_PHRASE=фраза]
 Если ученик выучил новое слово, добавь [NEW_WORD=слово]
@@ -189,7 +190,8 @@ def handle_message(message):
     personal_text = ""
     if personal_info:
         personal_text = f"""
-Личная информация об ученике:- Нравится: {personal_info.get('likes', [])}
+Личная информация об ученике:
+- Нравится: {personal_info.get('likes', [])}
 - Не нравится: {personal_info.get('dislikes', [])}
 - Где был: {personal_info.get('visited', [])}
 - Что важно: {personal_info.get('important', [])}
@@ -288,7 +290,8 @@ def handle_message(message):
         match = re.search(r'\[MISTAKE=([^\]]+)\]', answer)
         if match:
             current = profile.get('mistakes', [])
-            current.append(match.group(1))update_user(user_id, {'mistakes': current})
+            current.append(match.group(1))
+            update_user(user_id, {'mistakes': current})
             answer = re.sub(r'\[MISTAKE=[^\]]+\]', '', answer)
 
     if '[NEW_GRAMMAR=' in answer:
