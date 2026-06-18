@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇯🇵 Учим японский с Рётой</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #app {
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            max-height: 800px;
+            background: #161b22;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #30363d;
+        }
+        
+        #header {
+            padding: 16px 20px;
+            background: #0d1117;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        #header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        #header-info {
+            font-size: 13px;
+            color: #8b949e;
+            text-align: right;
+        }
+        
+        #header-info #avatar-name {
+            color: #e6edf3;
+            font-weight: 500;
+        }
+        
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .message {
+            display: flex;
+            gap: 10px;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        
+        .message .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #30363d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .message .text {
+            background: #21262d;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .message.user .text {
+            background: #1f6feb;
+        }
+        
+        .message .text .kanji {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        #input-area {
+            padding: 12px 20px;
+            border-top: 1px solid #30363d;
+            display: flex;
+            gap: 10px;
+            background: #0d1117;
+            flex-shrink: 0;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #30363d;
+            border-radius: 24px;
+            background: #161b22;
+            color: #e6edf3;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        #user-input:focus {
+            border-color: #1f6feb;
+        }
+        
+        #user-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #send-btn {
+            padding: 10px 20px;
+            background: #1f6feb;
+            border: none;
+            border-radius: 24px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+        }
+        
+        #send-btn:hover:not(:disabled) {
+            background: #2f81f7;
+        }
+        
+        #send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #typing-indicator {
+            display: none;
+            padding: 8px 14px;
+            color: #8b949e;
+            font-size: 13px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        
+        @media (max-width: 500px) {
+            #app {
+                max-height: 100vh;
+                border-radius: 0;
+                border: none;
+            }
+        }
+        
+        /* Стили для скроллбара */
+        #messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        #messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #messages::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 3px;
+        }
+        #messages::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="header">
+            <h1>🇯🇵 日本語</h1>
+            <div id="header-info">
+                <div id="avatar-name">😎 Рёта</div>
+                <div>❤️ уровень: <span id="relationship-display">0</span></div>
+            </div>
+        </div>
+        
+        <div id="messages">
+            <div class="message bot">
+                <div class="avatar">😎</div>
+                <div class="text">Привет! 👋<br><br>Я Рёта, твой учитель японского. Давай выберем аватара:<br><br>🔹 <b>Рёта</b> — школьник, дерзкий, учит через мемы и игры<br>🔹 <b>Нанами</b> — бабушка-контрабандист, учит через истории<br>🔹 <b>Кендзи</b> — бизнесмен, прагматичный, без воды<br><br>Кто тебе ближе?</div>
+            </div>
+        </div>
+        
+        <div id="input-area">
+            <input id="user-input" type="text" placeholder="Напиши сообщение..." autofocus>
+            <button id="send-btn">→</button>
+        </div>
+    </div>
+
+    <script>
+        // === ID пользователя (хранится в браузере) ===
+        let userId = localStorage.getItem('userId');
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            localStorage.setItem('userId', userId);
+        }
+
+        // === DOM элементы ===
+        const messagesDiv = document.getElementById('messages');
+        const input = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const relationshipDisplay = document.getElementById('relationship-display');
+
+        // === Отправка сообщения ===
+        async function sendMessage() {
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Показываем сообщение пользователя
+            addMessage('user', text);
+            input.value = '';
+            input.disabled = true;
+            sendBtn.disabled = true;
+            showTyping(true);
+
+            try {
+                const response = await fetch('/api/message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: userId, 
+                        text: text 
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Ошибка сервера: ' + response.status);
+                }
+                
+                const data = await response.json();
+                
+                if (data.reply) {
+                    addMessage('bot', data.reply);
+                    // Проверяем, есть ли в ответе упоминание уровня отношений
+                    const relMatch = data.reply.match(/❤️\s*(\d+)/);
+                    if (relMatch) {
+                        relationshipDisplay.textContent = relMatch[1];
+                    }
+                } else {
+                    addMessage('bot', '⚠️ Сервер вернул пустой ответ');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                addMessage('bot', '⚠️ Ошибка соединения. Попробуйте позже.');
+            } finally {
+                input.disabled = false;
+                sendBtn.disabled = false;
+                input.focus();
+                showTyping(false);
+            }
+        }
+
+        // === Добавление сообщения в чат ===
+        function addMessage(type, text) {
+            const div = document.createElement('div');
+            div.className = 'message ' + type;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = type === 'user' ? '🧑' : '😎';
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'text';
+            // Заменяем переносы строк на <br>
+            textDiv.innerHTML = text.replace(/\n/g, '<br>');
+            
+            div.appendChild(avatar);
+            div.appendChild(textDiv);
+            messagesDiv.appendChild(div);
+            
+            // Прокручиваем вниз
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // === Индикатор печатания ===
+        function showTyping(show) {
+            let indicator = document.getElementById('typing-indicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.textContent = 'Рёта печатает...';
+                messagesDiv.appendChild(indicator);
+            }
+            indicator.style.display = show ? 'block' : 'none';
+            if (show) {
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        }
+
+        // === Обработчики событий ===
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        
+        sendBtn.addEventListener('click', sendMessage);
+        
+        // Фокус на поле ввода при загрузке
+        input.focus();
+
+        // === Обновление уровня отношений из localStorage ===
+        const savedRelationship = localStorage.getItem('relationship_' + userId);
+        if (savedRelationship) {
+            relationshipDisplay.textContent = savedRelationship;
+        }
+
+        // Перехватываем обновление уровня отношений из ответов
+        const originalAddMessage = addMessage;
+        addMessage = function(type, text) {
+            originalAddMessage(type, text);
+            // Пытаемся найти уровень отношений в ответе бота
+            if (type === 'bot') {
+                const match = text.match(/❤️\s*(\d+)/);
+                if (match) {
+                    const level = match[1];
+                    relationshipDisplay.textContent = level;
+                    localStorage.setItem('relationship_' + userId, level);
+                }
+            }
+        };
+    </script>
+</body>
+</html>
